@@ -50,10 +50,7 @@ func TestAgent(t *testing.T) {
 
 		var startJoinAddrs []string
 		if i != 0 {
-			startJoinAddrs = append(
-				startJoinAddrs,
-				agents[0].Config.BindAddr,
-			)
+			startJoinAddrs = append(startJoinAddrs, agents[0].Config.BindAddr)
 		}
 
 		agent, err := agent.New(agent.Config{
@@ -75,7 +72,8 @@ func TestAgent(t *testing.T) {
 	defer func() {
 		for _, agent := range agents {
 			_ = agent.Shutdown()
-			require.NoError(t,
+			require.NoError(
+				t,
 				os.RemoveAll(agent.Config.DataDir),
 			)
 		}
@@ -94,6 +92,10 @@ func TestAgent(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+
+	// wait until replication has finished
+	time.Sleep(3 * time.Second)
+
 	consumeResponse, err := leaderClient.Consume(
 		context.Background(),
 		&api.ConsumeRequest{
