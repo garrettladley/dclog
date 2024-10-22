@@ -99,26 +99,6 @@ jobs:
       - name: Install Make if not cached
         run: sudo apt-get update && sudo apt-get install -y make
         if: steps.cache-make.outputs.cache-hit != 'true'
-      - name: Cache CFSSL Installation
-        uses: actions/cache@v4
-        with:
-          path: /usr/local/bin/cfssl
-          key: ${{ runner.os }}-cfssl-install
-      - name: Cache CFSSLJSON Installation
-        uses: actions/cache@v4
-        with:
-          path: /usr/local/bin/cfssljson
-          key: ${{ runner.os }}-cfssljson-install
-      - name: Install CFSSL and CFSSLJSON if not cached
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget
-          wget -q --https-only --secure-protocol=TLSv1_2 https://pkg.cfssl.org/R1.2/cfssl_linux-amd64
-          wget -q --https-only --secure-protocol=TLSv1_2 https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64
-          sudo mv cfssl_linux-amd64 /usr/local/bin/cfssl
-          sudo mv cfssljson_linux-amd64 /usr/local/bin/cfssljson
-          sudo chmod +x /usr/local/bin/cfssl /usr/local/bin/cfssljson
-        if: steps.cache-cfssl.outputs.cache-hit != 'true' || steps.cache-cfssljson.outputs.cache-hit != 'true'
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -138,5 +118,19 @@ jobs:
         with:
           path: ${{ steps.go-cache-paths.outputs.go-mod }}
           key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
+      - name: Cache CFSSL and CFSSLJSON Installation
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.GOPATH }}/bin/cfssl
+            ${{ env.GOPATH }}/bin/cfssljson
+          key: ${{ runner.os }}-cfssl-install-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-cfssl-install-
+      - name: Install CFSSL and CFSSLJSON if not cached
+        run: |
+          go get github.com/cloudflare/cfssl/cmd/cfssl@v1.4.1
+          go get github.com/cloudflare/cfssl/cmd/cfssljson@v1.4.1
+        if: steps.cache-cfssl-and-cfssljson.outputs.cache-hit != 'true'
       - name: Test
         run: make init gencert test
