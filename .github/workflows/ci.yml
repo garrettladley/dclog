@@ -91,6 +91,14 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+      - name: Cache Make Installation
+        uses: actions/cache@v4
+        with:
+          path: /usr/bin/make
+          key: ${{ runner.os }}-make-install
+      - name: Install Make if not cached
+        run: sudo apt-get update && sudo apt-get install -y make
+        if: steps.cache-make.outputs.cache-hit != 'true'
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
