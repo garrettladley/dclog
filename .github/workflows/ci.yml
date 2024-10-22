@@ -71,5 +71,7 @@ jobs:
         run: |
           go get github.com/cloudflare/cfssl/cmd/cfssl
           go get github.com/cloudflare/cfssl/cmd/cfssljson
+      - name: Add CFSSL and CFSSLJSON to PATH
+        run: echo "$GOPATH/bin" >> $GITHUB_PATH
       - name: Test
         run: make init gencert test
