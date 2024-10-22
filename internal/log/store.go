@@ -7,9 +7,7 @@ import (
 	"sync"
 )
 
-var (
-	enc = binary.BigEndian
-)
+var enc = binary.BigEndian
 
 const (
 	lenWidth = 8
@@ -35,7 +33,6 @@ func newStore(f *os.File) (*store, error) {
 	}, nil
 }
 
-
 func (s *store) Append(p []byte) (n uint64, pos uint64, err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -51,7 +48,6 @@ func (s *store) Append(p []byte) (n uint64, pos uint64, err error) {
 	s.size += uint64(w)
 	return uint64(w), pos, nil
 }
-
 
 func (s *store) Read(pos uint64) ([]byte, error) {
 	s.mu.Lock()
@@ -69,7 +65,6 @@ func (s *store) Read(pos uint64) ([]byte, error) {
 	}
 	return b, nil
 }
-
 
 func (s *store) ReadAt(p []byte, off int64) (int, error) {
 	s.mu.Lock()

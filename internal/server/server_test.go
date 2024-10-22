@@ -3,7 +3,7 @@ package server
 import (
 	// ...
 	"context"
-
+	"flag"
 	"io/ioutil"
 	"net"
 	"os"
@@ -16,8 +16,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
-
-	"flag"
 
 	"go.opencensus.io/examples/exporter"
 

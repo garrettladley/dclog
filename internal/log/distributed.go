@@ -42,7 +42,7 @@ func NewDistributedLog(dataDir string, config Config) (
 
 func (l *DistributedLog) setupLog(dataDir string) error {
 	logDir := filepath.Join(dataDir, "log")
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	if err := os.MkdirAll(logDir, 0o755); err != nil {
 		return err
 	}
 	var err error
@@ -54,7 +54,7 @@ func (l *DistributedLog) setupRaft(dataDir string) error {
 	fsm := &fsm{log: l.log}
 
 	logDir := filepath.Join(dataDir, "raft", "log")
-	if err := os.MkdirAll(logDir, 0755); err != nil {
+	if err := os.MkdirAll(logDir, 0o755); err != nil {
 		return err
 	}
 	logConfig := l.config
@@ -362,6 +362,7 @@ func (l *logStore) GetLog(index uint64, out *raft.Log) error {
 func (l *logStore) StoreLog(record *raft.Log) error {
 	return l.StoreLogs([]*raft.Log{record})
 }
+
 func (l *logStore) StoreLogs(records []*raft.Log) error {
 	for _, record := range records {
 		if _, err := l.Append(&api.Record{
@@ -406,7 +407,7 @@ func (s *StreamLayer) Dial(
 	timeout time.Duration,
 ) (net.Conn, error) {
 	dialer := &net.Dialer{Timeout: timeout}
-	var conn, err = dialer.Dial("tcp", string(addr))
+	conn, err := dialer.Dial("tcp", string(addr))
 	if err != nil {
 		return nil, err
 	}

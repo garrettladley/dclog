@@ -34,7 +34,6 @@ func TestMembership(t *testing.T) {
 	require.Equal(t, fmt.Sprintf("%d", 2), <-handler.leaves)
 }
 
-
 func setupMember(t *testing.T, members []*Membership) (
 	[]*Membership, *handler,
 ) {
@@ -63,7 +62,6 @@ func setupMember(t *testing.T, members []*Membership) (
 	members = append(members, m)
 	return members, h
 }
-
 
 type handler struct {
 	joins  chan map[string]string
