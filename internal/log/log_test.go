@@ -1,7 +1,7 @@
 package log
 
 import (
-	"io"
+	"io/ioutil"
 	"os"
 	"testing"
 
@@ -21,7 +21,7 @@ func TestLog(t *testing.T) {
 		"truncate":                          testTruncate,
 	} {
 		t.Run(scenario, func(t *testing.T) {
-			dir, err := os.MkdirTemp("", "store-test")
+			dir, err := ioutil.TempDir("", "store-test")
 			require.NoError(t, err)
 			defer os.RemoveAll(dir)
 
@@ -34,6 +34,7 @@ func TestLog(t *testing.T) {
 		})
 	}
 }
+
 
 func testAppendRead(t *testing.T, log *Log) {
 	append := &api.Record{
@@ -55,6 +56,7 @@ func testOutOfRangeErr(t *testing.T, log *Log) {
 	apiErr := err.(api.ErrOffsetOutOfRange)
 	require.Equal(t, uint64(1), apiErr.Offset)
 }
+
 
 func testInitExisting(t *testing.T, o *Log) {
 	append := &api.Record{
@@ -93,7 +95,7 @@ func testReader(t *testing.T, log *Log) {
 	require.Equal(t, uint64(0), off)
 
 	reader := log.Reader()
-	b, err := io.ReadAll(reader)
+	b, err := ioutil.ReadAll(reader)
 	require.NoError(t, err)
 
 	read := &api.Record{}

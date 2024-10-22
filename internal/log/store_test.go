@@ -1,6 +1,7 @@
 package log
 
 import (
+	"io/ioutil"
 	"os"
 	"testing"
 
@@ -13,7 +14,7 @@ var (
 )
 
 func TestStoreAppendRead(t *testing.T) {
-	f, err := os.CreateTemp("", "store_append_read_test")
+	f, err := ioutil.TempFile("", "store_append_read_test")
 	require.NoError(t, err)
 	defer os.Remove(f.Name())
 
@@ -28,6 +29,7 @@ func TestStoreAppendRead(t *testing.T) {
 	require.NoError(t, err)
 	testRead(t, s)
 }
+
 
 func testAppend(t *testing.T, s *store) {
 	t.Helper()
@@ -57,7 +59,7 @@ func testReadAt(t *testing.T, s *store) {
 		require.NoError(t, err)
 		require.Equal(t, lenWidth, n)
 		off += int64(n)
-
+		
 		size := enc.Uint64(b)
 		b = make([]byte, size)
 		n, err = s.ReadAt(b, off)
@@ -69,17 +71,17 @@ func testReadAt(t *testing.T, s *store) {
 }
 
 func TestStoreClose(t *testing.T) {
-	f, err := os.CreateTemp("", "store_close_test")
+	f, err := ioutil.TempFile("", "store_close_test")
 	require.NoError(t, err)
 	defer os.Remove(f.Name())
 	s, err := newStore(f)
 	require.NoError(t, err)
 	_, _, err = s.Append(write)
 	require.NoError(t, err)
-
+	
 	f, beforeSize, err := openFile(f.Name())
 	require.NoError(t, err)
-
+	
 	err = s.Close()
 	require.NoError(t, err)
 
@@ -87,7 +89,7 @@ func TestStoreClose(t *testing.T) {
 	require.True(t, afterSize > beforeSize)
 }
 
-func openFile(name string) (file *os.File, size int64, err error) {
+func openFile(name string) (file *os.File, size int64, err error)  {
 	f, err := os.OpenFile(
 		name,
 		os.O_RDWR|os.O_CREATE|os.O_APPEND,
