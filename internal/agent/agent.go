@@ -81,7 +81,11 @@ func New(config Config) (*Agent, error) {
 			return nil, err
 		}
 	}
-	go a.serve()
+	go func() {
+		if err := a.serve(); err != nil {
+			logger.Fatal("agent failed", zap.Error(err))
+		}
+	}()
 	return a, nil
 }
 
@@ -113,7 +117,7 @@ func (a *Agent) setupLog() error {
 		if _, err := reader.Read(b); err != nil {
 			return false
 		}
-		return bytes.Compare(b, []byte{byte(log.RaftRPC)}) == 0
+		return bytes.Equal(b, []byte{byte(log.RaftRPC)})
 	})
 	logConfig := log.Config{}
 	logConfig.Raft.StreamLayer = log.NewStreamLayer(

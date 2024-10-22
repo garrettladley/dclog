@@ -1,9 +1,9 @@
 package server
 
 import (
-	// ...
 	"context"
 	"flag"
+	"fmt"
 	"net"
 	"os"
 	"testing"
@@ -23,8 +23,6 @@ import (
 	"github.com/garrettladley/dclog/internal/config"
 	"github.com/garrettladley/dclog/internal/log"
 )
-
-// imports...
 
 var debug = flag.Bool("debug", false, "Enable observability for debugging.")
 
@@ -89,7 +87,7 @@ func setupTest(t *testing.T, fn func(*Config)) (
 		require.NoError(t, err)
 		tlsCreds := credentials.NewTLS(tlsConfig)
 		opts := []grpc.DialOption{grpc.WithTransportCredentials(tlsCreds)}
-		conn, err := grpc.Dial(l.Addr().String(), opts...)
+		conn, err := grpc.NewClient(l.Addr().String(), opts...)
 		require.NoError(t, err)
 		client := api.NewLogClient(conn)
 		return conn, client, opts
@@ -157,7 +155,9 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	require.NoError(t, err)
 
 	go func() {
-		server.Serve(l)
+		if err := server.Serve(l); err != nil {
+			panic(fmt.Errorf("server serve: %w", err))
+		}
 	}()
 
 	return rootClient, nobodyClient, cfg, func() {

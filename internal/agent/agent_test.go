@@ -12,6 +12,7 @@ import (
 	"github.com/travisjeffery/go-dynaport"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/status"
 
 	api "github.com/garrettladley/dclog/api/v1"
 	"github.com/garrettladley/dclog/internal/agent"
@@ -123,8 +124,8 @@ func TestAgent(t *testing.T) {
 	)
 	require.Nil(t, consumeResponse)
 	require.Error(t, err)
-	got := grpc.Code(err)
-	want := grpc.Code(api.ErrOffsetOutOfRange{}.GRPCStatus().Err())
+	got := status.Code(err)
+	want := status.Code(api.ErrOffsetOutOfRange{}.GRPCStatus().Err())
 	require.Equal(t, got, want)
 }
 
@@ -133,7 +134,7 @@ func client(t *testing.T, agent *agent.Agent, tlsConfig *tls.Config) api.LogClie
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(tlsCreds)}
 	rpcAddr, err := agent.Config.RPCAddr()
 	require.NoError(t, err)
-	conn, err := grpc.Dial(rpcAddr, opts...)
+	conn, err := grpc.NewClient(rpcAddr, opts...)
 	require.NoError(t, err)
 	client := api.NewLogClient(conn)
 	return client
