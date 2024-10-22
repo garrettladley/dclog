@@ -2,23 +2,41 @@ package server
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"net"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
-
-	"github.com/garrettladley/dclog/internal/config"
-	"google.golang.org/grpc/credentials"
-
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
+
+	"go.opencensus.io/examples/exporter"
 
 	api "github.com/garrettladley/dclog/api/v1"
 	"github.com/garrettladley/dclog/internal/auth"
+	"github.com/garrettladley/dclog/internal/config"
 	"github.com/garrettladley/dclog/internal/log"
 )
+
+var debug = flag.Bool("debug", false, "Enable observability for debugging.")
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	if *debug {
+		logger, err := zap.NewDevelopment()
+		if err != nil {
+			panic(err)
+		}
+		zap.ReplaceGlobals(logger)
+	}
+	os.Exit(m.Run())
+}
 
 func TestServer(t *testing.T) {
 	for scenario, fn := range map[string]func(
@@ -69,7 +87,7 @@ func setupTest(t *testing.T, fn func(*Config)) (
 		require.NoError(t, err)
 		tlsCreds := credentials.NewTLS(tlsConfig)
 		opts := []grpc.DialOption{grpc.WithTransportCredentials(tlsCreds)}
-		conn, err := grpc.Dial(l.Addr().String(), opts...)
+		conn, err := grpc.NewClient(l.Addr().String(), opts...)
 		require.NoError(t, err)
 		client := api.NewLogClient(conn)
 		return conn, client, opts
@@ -104,6 +122,27 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	require.NoError(t, err)
 
 	authorizer := auth.New(config.ACLModelFile, config.ACLPolicyFile)
+
+	var telemetryExporter *exporter.LogExporter
+	if *debug {
+		metricsLogFile, err := os.CreateTemp("", "metrics-*.log")
+		require.NoError(t, err)
+		t.Logf("metrics log file: %s", metricsLogFile.Name())
+
+		tracesLogFile, err := os.CreateTemp("", "traces-*.log")
+		require.NoError(t, err)
+		t.Logf("traces log file: %s", tracesLogFile.Name())
+
+		telemetryExporter, err = exporter.NewLogExporter(exporter.Options{
+			MetricsLogFile:    metricsLogFile.Name(),
+			TracesLogFile:     tracesLogFile.Name(),
+			ReportingInterval: time.Second,
+		})
+		require.NoError(t, err)
+		err = telemetryExporter.Start()
+		require.NoError(t, err)
+	}
+
 	cfg = &Config{
 		CommitLog:  clog,
 		Authorizer: authorizer,
@@ -116,7 +155,9 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	require.NoError(t, err)
 
 	go func() {
-		server.Serve(l)
+		if err := server.Serve(l); err != nil {
+			panic(fmt.Errorf("server serve: %w", err))
+		}
 	}()
 
 	return rootClient, nobodyClient, cfg, func() {
@@ -124,6 +165,11 @@ func setupTest(t *testing.T, fn func(*Config)) (
 		rootConn.Close()
 		nobodyConn.Close()
 		l.Close()
+		if telemetryExporter != nil {
+			time.Sleep(1500 * time.Millisecond)
+			telemetryExporter.Stop()
+			telemetryExporter.Close()
+		}
 	}
 }
 
@@ -170,8 +216,8 @@ func testConsumePastBoundary(
 	if consume != nil {
 		t.Fatal("consume not nil")
 	}
-	got := grpc.Code(err)
-	want := grpc.Code(api.ErrOffsetOutOfRange{}.GRPCStatus().Err())
+	got := status.Code(err)
+	want := status.Code(api.ErrOffsetOutOfRange{}.GRPCStatus().Err())
 	if got != want {
 		t.Fatalf("got err: %v, want: %v", got, want)
 	}
@@ -262,128 +308,5 @@ func testUnauthorized(
 	gotCode, wantCode = status.Code(err), codes.PermissionDenied
 	if gotCode != wantCode {
 		t.Fatalf("got code: %d, want: %d", gotCode, wantCode)
-	}
-}
-
-func setupTest1(t *testing.T, fn func(*Config)) (
-	client api.LogClient,
-	cfg *Config,
-	teardown func(),
-) {
-	t.Helper()
-
-	t.Helper()
-
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(t, err)
-
-	clientTLSConfig, err := config.SetupTLSConfig(config.TLSConfig{
-		CAFile: config.CAFile,
-	})
-	require.NoError(t, err)
-
-	clientCreds := credentials.NewTLS(clientTLSConfig)
-	cc, err := grpc.Dial(
-		l.Addr().String(),
-		grpc.WithTransportCredentials(clientCreds),
-	)
-	require.NoError(t, err)
-
-	client = api.NewLogClient(cc)
-
-	serverTLSConfig, err := config.SetupTLSConfig(config.TLSConfig{
-		CertFile:      config.ServerCertFile,
-		KeyFile:       config.ServerKeyFile,
-		CAFile:        config.CAFile,
-		ServerAddress: l.Addr().String(),
-	})
-	require.NoError(t, err)
-	serverCreds := credentials.NewTLS(serverTLSConfig)
-
-	dir, err := os.MkdirTemp("", "server-test")
-	require.NoError(t, err)
-
-	clog, err := log.NewLog(dir, log.Config{})
-	require.NoError(t, err)
-
-	cfg = &Config{
-		CommitLog: clog,
-	}
-	if fn != nil {
-		fn(cfg)
-	}
-	server, err := NewGRPCServer(cfg, grpc.Creds(serverCreds))
-	require.NoError(t, err)
-
-	go func() {
-		server.Serve(l)
-	}()
-
-	return client, cfg, func() {
-		server.Stop()
-		cc.Close()
-		l.Close()
-	}
-}
-
-func setupTest2(t *testing.T, fn func(*Config)) (
-	client api.LogClient,
-	cfg *Config,
-	teardown func(),
-) {
-	t.Helper()
-
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(t, err)
-
-	clientTLSConfig, err := config.SetupTLSConfig(config.TLSConfig{
-		CertFile: config.ClientCertFile,
-		KeyFile:  config.ClientKeyFile,
-		CAFile:   config.CAFile,
-	})
-	require.NoError(t, err)
-
-	clientCreds := credentials.NewTLS(clientTLSConfig)
-	cc, err := grpc.Dial(
-		l.Addr().String(),
-		grpc.WithTransportCredentials(clientCreds),
-	)
-	require.NoError(t, err)
-
-	client = api.NewLogClient(cc)
-
-	serverTLSConfig, err := config.SetupTLSConfig(config.TLSConfig{
-		CertFile:      config.ServerCertFile,
-		KeyFile:       config.ServerKeyFile,
-		CAFile:        config.CAFile,
-		ServerAddress: l.Addr().String(),
-		Server:        true,
-	})
-	require.NoError(t, err)
-	serverCreds := credentials.NewTLS(serverTLSConfig)
-
-	dir, err := os.MkdirTemp("", "server-test")
-	require.NoError(t, err)
-
-	clog, err := log.NewLog(dir, log.Config{})
-	require.NoError(t, err)
-
-	cfg = &Config{
-		CommitLog: clog,
-	}
-	if fn != nil {
-		fn(cfg)
-	}
-	server, err := NewGRPCServer(cfg, grpc.Creds(serverCreds))
-	require.NoError(t, err)
-
-	go func() {
-		server.Serve(l)
-	}()
-
-	return client, cfg, func() {
-		server.Stop()
-		cc.Close()
-		l.Close()
 	}
 }

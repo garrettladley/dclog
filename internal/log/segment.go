@@ -25,7 +25,7 @@ func newSegment(dir string, baseOffset uint64, c Config) (*segment, error) {
 	storeFile, err := os.OpenFile(
 		path.Join(dir, fmt.Sprintf("%d%s", baseOffset, ".store")),
 		os.O_RDWR|os.O_CREATE|os.O_APPEND,
-		0644,
+		0o644,
 	)
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func newSegment(dir string, baseOffset uint64, c Config) (*segment, error) {
 	indexFile, err := os.OpenFile(
 		path.Join(dir, fmt.Sprintf("%d%s", baseOffset, ".index")),
 		os.O_RDWR|os.O_CREATE,
-		0644,
+		0o644,
 	)
 	if err != nil {
 		return nil, err
@@ -114,12 +114,4 @@ func (s *segment) Remove() error {
 		return err
 	}
 	return nil
-}
-
-func nearestMultiple(j, k uint64) uint64 {
-	if j >= 0 {
-		return (j / k) * k
-	}
-	return ((j - k + 1) / k) * k
-
 }
