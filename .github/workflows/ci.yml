@@ -25,23 +25,8 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.23"
-      - name: Get Go Cache Paths
-        id: go-cache-paths
-        run: |
-          echo "go-build=$(go env GOCACHE)" >> $GITHUB_OUTPUT
-          echo "go-mod=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
       - name: Install gofumpt
         run: go install mvdan.cc/gofumpt@latest
-      - name: Go Build Cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.go-cache-paths.outputs.go-build }}
-          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
-      - name: Go Mod Cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.go-cache-paths.outputs.go-mod }}
-          key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
       - name: Check Code Formatting
         run: |
           unformatted_files=$(gofumpt -l .)
@@ -63,21 +48,6 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.23"
-      - name: Get Go Cache Paths
-        id: go-cache-paths
-        run: |
-          echo "go-build=$(go env GOCACHE)" >> $GITHUB_OUTPUT
-          echo "go-mod=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
-      - name: Go Build Cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.go-cache-paths.outputs.go-build }}
-          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
-      - name: Go Mod Cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.go-cache-paths.outputs.go-mod }}
-          key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v5
         with:
@@ -91,48 +61,15 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-      - name: Cache Make Installation
-        uses: actions/cache@v4
-        with:
-          path: /usr/bin/make
-          key: ${{ runner.os }}-make-install
-      - name: Install Make if not cached
+      - name: Install Make
         run: sudo apt-get update && sudo apt-get install -y make
-        if: steps.cache-make.outputs.cache-hit != 'true'
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: "1.23"
-      - name: Get Go Cache Paths
-        id: go-cache-paths
+      - name: Install CFSSL and CFSSLJSON
         run: |
-          echo "go-build=$(go env GOCACHE)" >> $GITHUB_OUTPUT
-          echo "go-mod=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
-      - name: Go Build Cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.go-cache-paths.outputs.go-build }}
-          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
-      - name: Go Mod Cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.go-cache-paths.outputs.go-mod }}
-          key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
-      - name: Cache CFSSL and CFSSLJSON Installation
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ env.GOPATH }}/bin/cfssl
-            ${{ env.GOPATH }}/bin/cfssljson
-          key: ${{ runner.os }}-cfssl-install-${{ hashFiles('go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-cfssl-install-
-      - name: Install CFSSL and CFSSLJSON if not cached
-        run: |
-          go get github.com/cloudflare/cfssl/cmd/cfssl@v1.4.1
-          go get github.com/cloudflare/cfssl/cmd/cfssljson@v1.4.1
-        if: steps.cache-cfssl-and-cfssljson.outputs.cache-hit != 'true'
-      - name: Add CFSSL and CFSSLJSON to PATH
-        run: echo "$GOPATH/bin" >> $GITHUB_PATH
+          go install github.com/cloudflare/cfssl/cmd/cfssl@v1.4.1
+          go install github.com/cloudflare/cfssl/cmd/cfssljson@v1.4.1
       - name: Test
         run: make init gencert test
