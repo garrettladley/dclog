@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -27,7 +27,7 @@ func SetupTLSConfig(cfg TLSConfig) (*tls.Config, error) {
 		return nil, err
 	}
 	if cfg.CAFile != "" {
-		b, err := ioutil.ReadFile(cfg.CAFile)
+		b, err := os.ReadFile(cfg.CAFile)
 		if err != nil {
 			return nil, err
 		}
