@@ -110,7 +110,5 @@ jobs:
         with:
           path: ${{ steps.go-cache-paths.outputs.go-mod }}
           key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
-      - name: Run Tests with Coverage
-        run: go test -v -race -coverprofile=coverage.txt ./...
-      - name: Print Coverage
-        run: go tool cover -func=coverage.txt
+      - name: Test
+        run: make init gencert test
