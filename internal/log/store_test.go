@@ -77,15 +77,14 @@ func TestStoreClose(t *testing.T) {
 	_, _, err = s.Append(write)
 	require.NoError(t, err)
 
-	var beforeSize int64
-	f, beforeSize, err = openFile(f.Name())
+	f, beforeSize, err := openFile(f.Name())
 	require.NoError(t, err)
 
 	err = s.Close()
 	require.NoError(t, err)
 
-	var afterSize int64
-	f, afterSize, err = openFile(f.Name())
+	f, afterSize, err := openFile(f.Name())
+	require.NoError(t, err)
 	require.True(t, afterSize > beforeSize)
 }
 
