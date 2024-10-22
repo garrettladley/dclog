@@ -69,7 +69,7 @@ jobs:
           go-version: "1.23"
       - name: Install CFSSL and CFSSLJSON
         run: |
-          go install github.com/cloudflare/cfssl/cmd/cfssl
-          go install github.com/cloudflare/cfssl/cmd/cfssljson
+          go get github.com/cloudflare/cfssl/cmd/cfssl
+          go get github.com/cloudflare/cfssl/cmd/cfssljson
       - name: Test
         run: make init gencert test
