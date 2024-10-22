@@ -73,7 +73,7 @@ jobs:
           go install github.com/cloudflare/cfssl/cmd/cfssljson@latest
       - name: Init
         run: make init
-      - name: Generate Certificate
+      - name: Generate Certificates
         run: make gencert
       - name: Test
         run: make test
