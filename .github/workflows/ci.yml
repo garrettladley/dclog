@@ -69,8 +69,8 @@ jobs:
           go-version: "1.23"
       - name: Install CFSSL and CFSSLJSON
         run: |
-          go get github.com/cloudflare/cfssl/cmd/cfssl
-          go get github.com/cloudflare/cfssl/cmd/cfssljson
+          go install github.com/cloudflare/cfssl/cmd/cfssl@v1.4.1
+          go install github.com/cloudflare/cfssl/cmd/cfssljson@v1.4.1
           cfssl version
           cfssljson --version
       - name: Add CFSSL and CFSSLJSON to PATH
