@@ -44,7 +44,7 @@ require (
 	golang.org/x/oauth2 v0.23.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect
 	golang.org/x/text v0.19.0 // indirect
-	google.golang.org/grpc/examples v0.0.0-20241022170438-c538c3115071 // indirect
+	google.golang.org/grpc/examples v0.0.0-20241022174616-4bb0170ac65f // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
