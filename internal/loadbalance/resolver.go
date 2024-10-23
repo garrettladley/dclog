@@ -87,10 +87,15 @@ func (r *Resolver) ResolveNow(resolver.ResolveNowOptions) {
 			),
 		})
 	}
-	r.clientConn.UpdateState(resolver.State{
+	if err := r.clientConn.UpdateState(resolver.State{
 		Addresses:     addrs,
 		ServiceConfig: r.serviceConfig,
-	})
+	}); err != nil {
+		r.logger.Error(
+			"failed to update state",
+			zap.Error(err),
+		)
+	}
 }
 
 func (r *Resolver) Close() {

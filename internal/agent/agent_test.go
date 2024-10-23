@@ -134,7 +134,7 @@ func client(t *testing.T, agent *agent.Agent, tlsConfig *tls.Config) api.LogClie
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(tlsCreds)}
 	rpcAddr, err := agent.Config.RPCAddr()
 	require.NoError(t, err)
-	conn, err := grpc.Dial(fmt.Sprintf(
+	conn, err := grpc.NewClient(fmt.Sprintf(
 		"%s:///%s",
 		loadbalance.Name,
 		rpcAddr,

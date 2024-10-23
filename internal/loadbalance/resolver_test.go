@@ -1,6 +1,7 @@
 package loadbalance_test
 
 import (
+	"fmt"
 	"net"
 	"net/url"
 	"testing"
@@ -37,7 +38,11 @@ func TestResolver(t *testing.T) {
 	}, grpc.Creds(serverCreds))
 	require.NoError(t, err)
 
-	go srv.Serve(l)
+	go func() {
+		if err := srv.Serve(l); err != nil {
+			panic(fmt.Errorf("failed to serve: %w", err))
+		}
+	}()
 
 	conn := &clientConn{}
 	tlsConfig, err = config.SetupTLSConfig(config.TLSConfig{
