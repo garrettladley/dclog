@@ -81,7 +81,11 @@ func New(config Config) (*Agent, error) {
 			return nil, err
 		}
 	}
-	go func() { _ = a.serve() }()
+	go func() {
+		if err := a.serve(); err != nil {
+			logger.Error("serve error", zap.Error(err))
+		}
+	}()
 	return a, nil
 }
 
