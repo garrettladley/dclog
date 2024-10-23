@@ -12,9 +12,9 @@ import (
 )
 
 func TestMembership(t *testing.T) {
-	m, handler := setupMember(t, nil)
-	m, _ = setupMember(t, m)
-	m, _ = setupMember(t, m)
+	m, handler := setupMembership(t, nil)
+	m, _ = setupMembership(t, m)
+	m, _ = setupMembership(t, m)
 
 	require.Eventually(t, func() bool {
 		return 2 == len(handler.joins) &&
@@ -34,9 +34,7 @@ func TestMembership(t *testing.T) {
 	require.Equal(t, fmt.Sprintf("%d", 2), <-handler.leaves)
 }
 
-func setupMember(t *testing.T, members []*Membership) (
-	[]*Membership, *handler,
-) {
+func setupMembership(t *testing.T, members []*Membership) ([]*Membership, *handler) {
 	id := len(members)
 	ports := dynaport.Get(1)
 	addr := fmt.Sprintf("%s:%d", "127.0.0.1", ports[0])
