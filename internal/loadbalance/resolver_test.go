@@ -60,7 +60,7 @@ func TestResolver(t *testing.T) {
 	r := &loadbalance.Resolver{}
 	_, err = r.Build(
 		resolver.Target{
-			URL: url.URL{Host: l.Addr().String()},
+			URL: url.URL{Path: l.Addr().String()},
 		},
 		conn,
 		opts,
