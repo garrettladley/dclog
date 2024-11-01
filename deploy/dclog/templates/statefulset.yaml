@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "dclog.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels: {{ include "dclog.labels" . | nindent 4 }}
+  {{ if .Values.service.lb }}
+  annotations:
+    service-per-pod-label: "statefulset.kubernetes.io/pod-name"
+    service-per-pod-ports: "{{.Values.rpcPort}}:{{.Values.rpcPort}}"
+  {{ end }}
+spec:
+  # ...
+  selector:
+    matchLabels: {{ include "dclog.selectorLabels" . | nindent 6 }}
+  serviceName: {{ include "dclog.fullname" . }}
+  replicas: {{ .Values.replicas }}
+  template:
+    metadata:
+      name: {{ include "dclog.fullname" . }}
+      labels: {{ include "dclog.labels" . | nindent 8 }}
+    spec:
+      initContainers:
+      - name: {{ include "dclog.fullname" . }}-config-init
+        image: busybox
+        imagePullPolicy: IfNotPresent
+        command:
+          - /bin/sh
+          - -c
+          - |-
+            ID=$(echo $HOSTNAME | rev | cut -d- -f1 | rev)
+            cat > /var/run/dclog/config.yaml <<EOD
+            data-dir: /var/run/dclog/data
+            rpc-port: {{.Values.rpcPort}}
+            bind-addr: "$HOSTNAME.dclog.{{.Release.Namespace}}.svc.cluster.local:{{.Values.serfPort}}"
+            bootstrap: $([ $ID = 0 ] && echo true || echo false )
+            $([ $ID != 0 ] && echo 'start-join-addrs: "dclog-0.dclog.{{.Release.Namespace}}.svc.cluster.local:{{.Values.serfPort}}"')
+            EOD
+        volumeMounts:
+        - name: datadir
+          mountPath: /var/run/dclog
+      containers:
+      - name: {{ include "dclog.fullname" . }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        ports:
+        - containerPort: {{ .Values.rpcPort }}
+          name: rpc
+        - containerPort: {{ .Values.serfPort }}
+          name: serf
+        args:
+          - --config-file=/var/run/dclog/config.yaml
+        readinessProbe:
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:{{ .Values.rpcPort }}"]
+          initialDelaySeconds: 5
+        livenessProbe:
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:{{ .Values.rpcPort }}"]
+          initialDelaySeconds: 10
+        volumeMounts:
+        - name: datadir
+          mountPath: /var/run/dclog
+  volumeClaimTemplates:
+  - metadata:
+      name: datadir
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.storage }}

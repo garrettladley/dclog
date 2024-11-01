@@ -38,6 +38,7 @@ gencert:
 		-profile=client \
 		-cn="nobody" \
 		test/client-csr.json | cfssljson -bare nobody-client
+
 	mv *.pem *.csr ${CONFIG_PATH}
 
 $(CONFIG_PATH)/model.conf:
@@ -58,3 +59,11 @@ compile:
 		--go_opt=paths=source_relative \
 		--go-grpc_opt=paths=source_relative \
 		--proto_path=.
+
+# START: build_docker
+TAG ?= 0.0.1
+
+build-docker:
+	docker build -t github.com/travisjeffery/dclog:$(TAG) .
+
+# END: build_docker
